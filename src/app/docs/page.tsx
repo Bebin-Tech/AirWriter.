@@ -56,6 +56,7 @@ export default function DocsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search titles…"
+          aria-label="Search saved documents"
           className="ml-2 hidden w-[220px] rounded-lg border border-white/[.08] bg-black/30 px-2.5 py-1.5
                      text-[12.5px] text-white outline-none transition focus:border-accent sm:block"
         />
@@ -67,14 +68,14 @@ export default function DocsPage() {
         </div>
       </header>
 
-      <main className="grid flex-1 items-start gap-3.5 p-3.5 lg:grid-cols-[230px_minmax(0,1fr)]">
+      <main className="mx-auto grid w-full max-w-[1600px] flex-1 items-start gap-6 p-4 sm:p-6 lg:grid-cols-[230px_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-[70px] lg:h-[calc(100dvh-86px)]">
           <DocsSidebar sections={sections} docs={lib.docs} scope={scope} onScope={setScope} />
         </div>
 
         <section className="min-w-0">
           <div className="mb-3 flex items-baseline gap-2.5 px-0.5">
-            <h1 className="text-[17px] font-semibold tracking-tight">{heading}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
             <span className="num text-[11.5px] text-mute">
               {visible.length} {visible.length === 1 ? 'doc' : 'docs'}
             </span>
@@ -87,9 +88,10 @@ export default function DocsPage() {
               ))}
             </div>
           ) : (
-            <div className="card grid place-items-center px-6 py-16 text-center">
+            <div className="card studio-intro grid place-items-center px-6 py-20 text-center">
+              <div aria-hidden="true" className="mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-accent/20 bg-accent/10 text-2xl text-accent">▤</div>
               <p className="text-[13.5px] font-medium">
-                {query ? 'Nothing matches that.' : 'No docs here yet.'}
+                {query ? 'No matching notebooks' : 'Good ideas deserve a home.'}
               </p>
               <p className="mt-1 max-w-[380px] text-[12px] leading-relaxed text-mute">
                 Write a page, then hit <span className="text-mute-bright">Save to docs</span> in the

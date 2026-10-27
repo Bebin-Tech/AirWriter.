@@ -28,7 +28,7 @@ export function Button({
   const sizes = { sm: 'h-8 px-3 text-[12.5px]', md: 'h-10 px-4 text-sm' }[size];
   const variants = {
     primary:
-      'bg-accent-deep text-white shadow-[0_6px_20px_-8px_rgba(79,70,229,.9)] hover:bg-indigo-500 active:scale-[.98]',
+      'bg-accent text-ink-950 shadow-[0_4px_16px_-6px_rgba(118,228,205,.3)] hover:bg-emerald-200 active:scale-[.98]',
     outline:
       'border border-white/10 bg-white/[.03] text-mute-bright hover:bg-white/[.07] hover:text-white active:scale-[.98]',
     ghost: 'text-mute hover:text-white hover:bg-white/[.06]',
@@ -92,15 +92,16 @@ export function Segmented<T extends string>({
   full?: boolean;
 }) {
   return (
-    <div className={clsx('flex gap-1 rounded-lg border border-white/[.07] bg-black/25 p-1', full && 'w-full')}>
+    <div className={clsx('flex gap-1 rounded-xl border border-white/[.07] bg-ink-950/60 p-1', full && 'w-full')}>
       {options.map((o) => (
         <button
           key={o.value} type="button" title={o.title} disabled={o.disabled}
+          aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={clsx(
             'flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition disabled:opacity-35',
             value === o.value
-              ? 'bg-white/[.11] text-white shadow-[0_1px_0_rgba(255,255,255,.08)_inset]'
+              ? 'bg-accent/15 text-accent shadow-[0_1px_0_rgba(255,255,255,.08)_inset]'
               : 'text-mute hover:text-mute-bright',
           )}
         >

@@ -22,7 +22,7 @@ function StageFrame({
 }) {
   return (
     <div className="card overflow-hidden">
-      <header className="flex items-center gap-2 border-b border-white/[.06] px-3 py-2">
+      <header className="flex flex-wrap items-center gap-2 border-b border-white/[.06] px-4 py-3">
         <span className="label">{title}</span>
         {badge}
         <div className="ml-auto flex items-center gap-1.5">
@@ -39,8 +39,8 @@ function StageFrame({
           </Button>
         </div>
       </header>
-      <div className="relative aspect-[4/3] bg-black">{children}</div>
-      <footer className="flex items-center gap-2 border-t border-white/[.06] px-3 py-2">{footer}</footer>
+      <div className="camera-surface relative aspect-[4/3]">{children}</div>
+      <footer className="flex flex-wrap items-center gap-2 border-t border-white/[.06] px-4 py-3">{footer}</footer>
     </div>
   );
 }
@@ -49,7 +49,7 @@ function StageFrame({
 
 export function PaperCamera({
   videoRef, canvasRef, quad, setQuad, hoverRef, editing, setEditing, onReset,
-  rotation, onRotate, device, devices, onDevice, mirror, onMirror, penDown,
+  rotation, onRotate, device, devices, onDevice, mirror, onMirror, penDown, active,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -67,6 +67,7 @@ export function PaperCamera({
   mirror: boolean;
   onMirror: (v: boolean) => void;
   penDown: boolean;
+  active: boolean;
 }) {
   const drag = useRef<{ kind: 'corner'; i: number } | { kind: 'move'; from: Point; start: Quad } | null>(null);
 
@@ -109,7 +110,7 @@ export function PaperCamera({
   return (
     <StageFrame
       title="Overhead · paper"
-      badge={<Badge tone={penDown ? 'live' : 'idle'}>{penDown ? 'writing' : 'tracking'}</Badge>}
+      badge={<Badge tone={penDown ? 'live' : 'idle'}>{penDown ? 'writing' : active ? 'tracking' : 'offline'}</Badge>}
       device={device} devices={devices} onDevice={onDevice} mirror={mirror} onMirror={onMirror}
       footer={
         <>
@@ -132,6 +133,15 @@ export function PaperCamera({
     >
       <video ref={videoRef} playsInline muted
         className={clsx('absolute inset-0 h-full w-full object-cover', mirror && 'scale-x-[-1]')} />
+      {!active && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+          <div className="grid h-14 w-14 place-items-center rounded-2xl border border-accent/20 bg-accent/5 text-accent">
+            <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 8V5a1 1 0 0 1 1-1h3m8 0h3a1 1 0 0 1 1 1v3m0 8v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><circle cx="12" cy="12" r="4"/></svg>
+          </div>
+          <p className="text-sm font-medium text-mute-bright">Your paper comes to life here</p>
+          <p className="max-w-[30ch] text-xs leading-relaxed text-mute">Start your cameras to connect your physical page to your digital notebook.</p>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}

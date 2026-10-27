@@ -36,9 +36,38 @@ export default function Page() {
     <div className="relative z-10 flex min-h-dvh flex-col">
       <TopBar runtime={runtime} onStart={nb.start} onStop={nb.stop} />
 
-      <main className="grid flex-1 items-start gap-3.5 p-3.5
-                       xl:grid-cols-[minmax(320px,0.95fr)_minmax(380px,1.15fr)_290px]">
-        <div className="grid gap-3.5">
+      <div className="mx-auto w-full max-w-[1800px] px-4 pt-6 sm:px-6">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="label mb-2 text-accent">Your digital writing studio</p>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Make room for your ideas.</h1>
+            <p className="mt-2 text-sm text-mute">From a movement of your finger to a page worth keeping.</p>
+          </div>
+          <span className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs text-mute-bright sm:block">Camera tracking · Vector PDF</span>
+        </div>
+        <section aria-label="Getting started" className="studio-intro mb-6 grid gap-5 rounded-[20px] border border-white/10 p-5 lg:grid-cols-[1fr_2fr]">
+          <div>
+            <p className="text-sm font-semibold text-white">A little setup. A lot of possibility.</p>
+            <p className="mt-1 text-xs leading-relaxed text-mute">Your handwriting, captured in real time.</p>
+          </div>
+          <ol className="grid gap-4 sm:grid-cols-3">
+            {[
+              ['01', 'Connect your camera', 'Start cameras and choose your devices.'],
+              ['02', 'Frame your paper', 'Fit the four corners to your sheet.'],
+              ['03', 'Write. Save. Share.', 'Capture your ideas and export a PDF.'],
+            ].map(([number, title, detail]) => (
+              <li key={number} className="flex gap-3">
+                <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-accent/20 bg-accent/10 text-xs text-accent">{number}</span>
+                <div><p className="text-xs font-semibold text-white">{title}</p><p className="mt-1 text-[11px] leading-relaxed text-mute">{detail}</p></div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+
+      <main className="mx-auto grid w-full max-w-[1800px] flex-1 items-start gap-5 px-4 pb-6 sm:px-6
+                       xl:grid-cols-[minmax(300px,0.9fr)_minmax(460px,1.35fr)_280px]">
+        <div className="grid min-w-0 gap-5">
           <PaperCamera
             videoRef={refs.topVideo}
             canvasRef={refs.topOverlay}
@@ -56,6 +85,7 @@ export default function Page() {
             mirror={settings.topMirror}
             onMirror={(topMirror) => setSettings({ topMirror })}
             penDown={runtime.penDown}
+            active={runtime.phase === 'live'}
           />
           <SideCamera
             videoRef={refs.sideVideo}
@@ -97,6 +127,11 @@ export default function Page() {
           onCalibrateDesk={nb.calibrateDesk}
         />
       </main>
+
+      <footer className="mx-auto flex w-full max-w-[1800px] flex-wrap justify-between gap-2 px-6 pb-6 text-[11px] text-mute">
+        <span>AirWrite Studio · A new space for your thoughts.</span>
+        <span>Camera processing stays on your device. Typed transcription uses AI.</span>
+      </footer>
 
       {exportOpen && nb.notebookRef.current && (
         <ExportDialog

@@ -14,7 +14,8 @@ export function ControlPanel({
 }) {
   const heightMode = settings.trigger === 'height';
   return (
-    <div className="card scroll-thin flex max-h-[calc(100vh-104px)] flex-col overflow-y-auto">
+    <div className="card scroll-thin flex flex-col overflow-y-auto xl:max-h-[calc(100vh-120px)]">
+      <div className="border-b border-white/[.06] px-4 py-4"><h2 className="text-sm font-semibold">Make it yours</h2><p className="mt-1 text-[11px] text-mute">Fine-tune your writing experience.</p></div>
       <Section title="Pen trigger">
         <Segmented<Trigger>
           value={settings.trigger}

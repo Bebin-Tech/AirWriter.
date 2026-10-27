@@ -50,8 +50,8 @@ export function Logo({ tagline }: { tagline?: string }) {
     <div className="flex items-center gap-2.5">
       <LogoTile />
       <div className="leading-none">
-        <div className="text-[13.5px] font-semibold tracking-tight">AirWrite</div>
-        {tagline && <div className="text-[10.5px] text-mute">{tagline}</div>}
+        <div className="text-[19px] font-semibold tracking-tight">AirWrite<span className="text-accent">.</span></div>
+        {tagline && <div className="mt-1 text-[8px] tracking-[0.18em] text-mute">{tagline}</div>}
       </div>
     </div>
   );

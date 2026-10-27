@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink-950: #08090d;
-  --color-ink-900: #0b0d12;
-  --color-ink-850: #10131a;
-  --color-ink-800: #151922;
-  --color-ink-700: #1d222d;
-  --color-ink-600: #2a3140;
-  --color-mute: #8b93a6;
-  --color-mute-bright: #b9c0cf;
-  --color-accent: #818cf8;
-  --color-accent-deep: #4f46e5;
+  --color-ink-950: #0b121b;
+  --color-ink-900: #101a26;
+  --color-ink-850: #14202e;
+  --color-ink-800: #192838;
+  --color-ink-700: #243749;
+  --color-ink-600: #344b60;
+  --color-mute: #96a8ba;
+  --color-mute-bright: #d1dce6;
+  --color-accent: #76e4cd;
+  --color-accent-deep: #167d70;
   --color-live: #34d399;
   --color-desk: #fbbf24;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius-card: 14px;
+  --radius-card: 20px;
 }
 
 @layer base {
@@ -35,8 +35,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(900px 520px at 12% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
-      radial-gradient(760px 460px at 96% 4%, rgba(20, 184, 166, 0.10), transparent 62%);
+      radial-gradient(1000px 600px at 0% 0%, rgba(47, 114, 131, 0.12), transparent 65%),
+      radial-gradient(760px 600px at 100% 20%, rgba(118, 228, 205, 0.04), transparent 70%);
     z-index: 0;
   }
   ::selection { background: rgba(129, 140, 248, 0.35); }
@@ -44,11 +44,11 @@
 
 @layer components {
   .card {
-    background: color-mix(in oklab, var(--color-ink-850) 88%, transparent);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: var(--color-ink-850);
+    border: 1px solid rgba(172, 201, 224, 0.12);
     border-radius: var(--radius-card);
     backdrop-filter: blur(12px);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 32px -24px rgba(0, 0, 0, 0.65);
   }
   .hairline { border-color: rgba(255, 255, 255, 0.07); }
   .label {
@@ -123,3 +123,24 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
   100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
 }
 .pulse { animation: pulse-ring 1.8s ease-out infinite; }
+
+.studio-intro { background: linear-gradient(115deg, #1a3040, #14232f 60%, #153830); }
+.camera-surface {
+  background-color: #0b141e;
+  background-image: radial-gradient(#49617355 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.page-desk {
+  background-color: #253644;
+  background-image: radial-gradient(#9ab0be25 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+button, a, select, input { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), a { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
