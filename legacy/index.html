@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Air Notebook — finger-tracked virtual notebook</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="bar">
+  <h1>Air&nbsp;Notebook</h1>
+  <div class="status" id="status">idle</div>
+  <div class="spacer"></div>
+  <div class="hud" id="hud"></div>
+</header>
+
+<main>
+  <section class="cams">
+    <div class="cam">
+      <div class="cam-head">
+        <label>Top camera (paper)</label>
+        <select id="topDevice"></select>
+        <label class="chk"><input type="checkbox" id="topMirror" checked /> mirror</label>
+      </div>
+      <div class="stage" id="topStage">
+        <video id="topVideo" playsinline muted></video>
+        <canvas id="topOverlay"></canvas>
+      </div>
+      <div class="cam-foot">
+        <button id="calibrate">Fit box to paper</button>
+        <button id="resetQuad" class="ghost">Reset box</button>
+        <span class="hint">Drag the four corners onto the paper's corners.</span>
+      </div>
+    </div>
+
+    <div class="cam">
+      <div class="cam-head">
+        <label>Side camera (height)</label>
+        <select id="sideDevice"></select>
+        <label class="chk"><input type="checkbox" id="sideMirror" /> mirror</label>
+      </div>
+      <div class="stage" id="sideStage">
+        <video id="sideVideo" playsinline muted></video>
+        <canvas id="sideOverlay"></canvas>
+      </div>
+      <div class="cam-foot">
+        <button id="setDesk">Set desk line from finger</button>
+        <span class="hint">Drag the yellow line to the paper surface.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="page-col">
+    <div class="page-head">
+      <button id="prevPage" class="ghost">◀</button>
+      <span id="pageLabel">Page 1 / 1</span>
+      <button id="nextPage" class="ghost">▶</button>
+      <button id="addPage">+ Page</button>
+      <div class="spacer"></div>
+      <button id="undo" class="ghost">Undo</button>
+      <button id="clearPage" class="ghost">Clear page</button>
+      <button id="export" class="primary">Export PDF</button>
+    </div>
+    <div class="paper-wrap">
+      <canvas id="page"></canvas>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <button id="start" class="primary wide">Start cameras</button>
+
+    <fieldset>
+      <legend>Pen trigger</legend>
+      <label><input type="radio" name="trigger" value="side" checked /> Side-camera height</label>
+      <label><input type="radio" name="trigger" value="pinch" /> Pinch (thumb + index)</label>
+      <label><input type="radio" name="trigger" value="hold" /> Hold <kbd>Space</kbd></label>
+      <label><input type="radio" name="trigger" value="always" /> Always writing</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Height thresholds</legend>
+      <label>Desk line <output id="deskOut"></output>
+        <input type="range" id="deskY" min="0.05" max="0.95" step="0.005" />
+      </label>
+      <label>Pen-down band <output id="downOut"></output>
+        <input type="range" id="downT" min="0.002" max="0.12" step="0.002" />
+      </label>
+      <label>Pen-up band <output id="upOut"></output>
+        <input type="range" id="upT" min="0.004" max="0.2" step="0.002" />
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Paper box</legend>
+      <label>Page size
+        <select id="pageSize">
+          <option value="a4">A4 portrait</option>
+          <option value="a4l">A4 landscape</option>
+          <option value="letter">Letter portrait</option>
+          <option value="letterl">Letter landscape</option>
+        </select>
+      </label>
+      <label>Margin crop <output id="cropOut"></output>
+        <input type="range" id="crop" min="0" max="0.15" step="0.005" value="0" />
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Ink</legend>
+      <label>Colour <input type="color" id="color" value="#12141a" /></label>
+      <label>Width <output id="widthOut"></output>
+        <input type="range" id="width" min="0.4" max="6" step="0.1" value="1.6" />
+      </label>
+      <label>Smoothing <output id="smoothOut"></output>
+        <input type="range" id="smooth" min="0" max="1" step="0.02" value="0.5" />
+      </label>
+      <label class="chk"><input type="checkbox" id="ruled" checked /> ruled background</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tracking</legend>
+      <label>Min detection confidence <output id="confOut"></output>
+        <input type="range" id="conf" min="0.1" max="0.9" step="0.05" value="0.4" />
+      </label>
+      <label class="chk"><input type="checkbox" id="showSkeleton" checked /> draw hand skeleton</label>
+    </fieldset>
+
+    <p class="note" id="note"></p>
+  </aside>
+</main>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

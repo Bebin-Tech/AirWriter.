@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+# vendored by scripts/setup-mediapipe.mjs (runs on postinstall)
+public/mediapipe
+public/models
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# local env files — never commit secrets
+.env*.local
+.env*
+node_modules/
+.DS_Store
