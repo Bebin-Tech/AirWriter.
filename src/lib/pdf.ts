@@ -8,6 +8,15 @@ export async function exportPdf(
   notebook: Pick<Notebook, 'pages' | 'sizeKey'>,
   { filename = 'airwrite.pdf', paper = 'blank' as Paper } = {},
 ) {
+  const doc = await createHandwritingPdf(notebook, { paper });
+  doc.save(filename);
+}
+
+/** Build separately from downloading so the actual PDF can be verified. */
+export async function createHandwritingPdf(
+  notebook: Pick<Notebook, 'pages' | 'sizeKey'>,
+  { paper = 'blank' as Paper } = {},
+) {
   const { jsPDF } = await import('jspdf');
   const size = PAGE_SIZES[notebook.sizeKey];
   const doc = new jsPDF({ unit: 'mm', format: size.fmt, orientation: size.orient });
@@ -22,15 +31,29 @@ export async function exportPdf(
       const [r, g, b] = hexRgb(st.color);
       doc.setDrawColor(r, g, b);
       doc.setLineWidth(st.width);
-      doc.lines(
-        st.pts.slice(1).map((p, k) => [p.x - st.pts[k].x, p.y - st.pts[k].y]),
-        st.pts[0].x,
-        st.pts[0].y,
-      );
+      // Match the canvas preview's quadratic midpoint smoothing exactly.
+      doc.moveTo(st.pts[0].x, st.pts[0].y);
+      let from = st.pts[0];
+      for (let k = 1; k < st.pts.length - 1; k++) {
+        const control = st.pts[k];
+        const next = st.pts[k + 1];
+        const to = { x: (control.x + next.x) / 2, y: (control.y + next.y) / 2 };
+        doc.curveTo(
+          from.x + (control.x - from.x) * 2 / 3,
+          from.y + (control.y - from.y) * 2 / 3,
+          to.x + (control.x - to.x) * 2 / 3,
+          to.y + (control.y - to.y) * 2 / 3,
+          to.x, to.y,
+        );
+        from = to;
+      }
+      const last = st.pts[st.pts.length - 1];
+      doc.lineTo(last.x, last.y);
+      doc.stroke();
     }
   });
 
-  doc.save(filename);
+  return doc;
 }
 
 function drawPaper(doc: import('jspdf').jsPDF, paper: Paper, w: number, h: number) {
@@ -64,6 +87,14 @@ export async function exportTextPdf(
     font = 'times' as TypedFont,
     fontSize = 12,
   }: { sizeKey: PageSizeKey; filename?: string; font?: TypedFont; fontSize?: number },
+) {
+  const doc = await createTextPdf(transcripts, { sizeKey, font, fontSize });
+  doc.save(filename);
+}
+
+export async function createTextPdf(
+  transcripts: PageTranscript[],
+  { sizeKey, font = 'times' as TypedFont, fontSize = 12 }: { sizeKey: PageSizeKey; font?: TypedFont; fontSize?: number },
 ) {
   const { jsPDF } = await import('jspdf');
   const size = PAGE_SIZES[sizeKey];
@@ -99,5 +130,5 @@ export async function exportTextPdf(
     }
   });
 
-  doc.save(filename);
+  return doc;
 }

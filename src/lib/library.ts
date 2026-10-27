@@ -33,7 +33,7 @@ const KEY = 'airnb.library.v1';
 /** Handoff slot: the docs page writes a doc id here, the app picks it up. */
 const OPEN_KEY = 'airnb.openDoc';
 
-const EMPTY: Library = { sections: [], docs: [] };
+const emptyLibrary = (): Library => ({ sections: [], docs: [] });
 
 export function newId() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -42,17 +42,17 @@ export function newId() {
 /* ------------------------------------------------------------ read / write */
 
 export function readLibrary(): Library {
-  if (typeof localStorage === 'undefined') return EMPTY;
+  if (typeof localStorage === 'undefined') return emptyLibrary();
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return EMPTY;
+    if (!raw) return emptyLibrary();
     const parsed = JSON.parse(raw) as Partial<Library>;
     return {
       sections: Array.isArray(parsed.sections) ? parsed.sections : [],
       docs: Array.isArray(parsed.docs) ? parsed.docs : [],
     };
   } catch {
-    return EMPTY;
+    return emptyLibrary();
   }
 }
 

@@ -27,8 +27,12 @@ export function ExportDialog({
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     addEventListener('keydown', esc);
-    return () => { removeEventListener('keydown', esc); abort.current?.abort(); };
+    return () => removeEventListener('keydown', esc);
   }, [onClose]);
+
+  // Parent runtime updates replace onClose while cameras are running. Only
+  // abort the network request when the dialog actually unmounts.
+  useEffect(() => () => abort.current?.abort(), []);
 
   const inked = notebook.inkedPages().length;
 

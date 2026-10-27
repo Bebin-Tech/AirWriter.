@@ -52,11 +52,10 @@ export function TopBar({ runtime, onStart, onStop }: { runtime: Runtime; onStart
         <Button
           variant={running ? 'outline' : 'primary'}
           size="md"
-          onClick={running ? onStop : onStart}
-          disabled={busy}
+          onClick={running || busy ? onStop : onStart}
         >
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg>
-          {busy ? 'Starting…' : running ? 'Stop' : 'Start cameras'}
+          {busy ? 'Cancel startup' : running ? 'Stop' : 'Start cameras'}
         </Button>
       </div>
     </header>

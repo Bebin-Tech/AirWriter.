@@ -37,6 +37,21 @@ Then: **Start cameras** → pick the overhead and side devices → **Fit box to 
 the four corners onto the paper's corners → rest your fingertip on the page and hit **Set
 desk line from finger** → write → **Export PDF**.
 
+## Verification
+
+Run `npm test` for regression checks covering perspective calibration, all four
+pen triggers with simulated landmarks, camera failure/retry/cancellation and stream
+cleanup, notebook operations, saved-document persistence, vector PDF curves and
+page sizes, and selectable text PDF pagination. Run `npm run typecheck` and
+`npm run build` before release. Tests require Node.js 24.
+
+Physical tracking accuracy still needs a real camera and a hand in view. Allow
+camera access in your browser, start cameras, fit the paper box, and test pinch
+writing. Height mode requires a separate side camera. Changing camera selections
+stops the session; click Start cameras to reconnect. GPU initialization falls back
+to CPU when WebGL is unavailable. Typed transcription requires a server-side
+`ANTHROPIC_API_KEY`; handwriting PDF export does not.
+
 ## Two ways to export
 
 **Your handwriting** — the strokes exactly as drawn, written straight to PDF as vector

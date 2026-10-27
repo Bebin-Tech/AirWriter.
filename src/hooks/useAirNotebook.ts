@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: Settings = {
   sideDevice: '',
   topMirror: true,
   sideMirror: false,
-  trigger: 'height',
+  trigger: 'pinch',
   deskY: 0.7,
   downT: 0.03,
   upT: 0.06,
@@ -115,6 +115,28 @@ export function useAirNotebook() {
   const hoverRef = useRef(-1);
   const draggingDeskRef = useRef(false);
   const editingBoxRef = useRef(true);
+  const sessionRef = useRef(0);
+  const startingRef = useRef(false);
+
+  const releaseSession = useCallback(() => {
+    sessionRef.current += 1;
+    startingRef.current = false;
+    if (loopRef.current !== null) cancelAnimationFrame(loopRef.current);
+    loopRef.current = null;
+    stopStream(streams.current.top);
+    stopStream(streams.current.side);
+    streams.current = { top: null, side: null };
+    if (topVideo.current) topVideo.current.srcObject = null;
+    if (sideVideo.current) sideVideo.current.srcObject = null;
+    if (notebookRef.current?.isDrawing) notebookRef.current.end();
+    penRef.current = false;
+    spaceRef.current = false;
+    lastSideTip.current = null;
+    lastFrame.current = 0;
+    fpsRef.current = 0;
+    lostRef.current = 0;
+    filterRef.current.reset();
+  }, []);
 
   settingsRef.current = settings;
   quadRef.current = quad;
@@ -141,14 +163,20 @@ export function useAirNotebook() {
   };
 
   const setSettings = useCallback((patch: Partial<Settings>) => {
+    if ((patch.topDevice !== undefined && patch.topDevice !== settingsRef.current.topDevice) ||
+        (patch.sideDevice !== undefined && patch.sideDevice !== settingsRef.current.sideDevice)) {
+      releaseSession();
+      setRuntime((r) => ({ ...r, phase: 'idle', message: 'Camera selection changed. Start cameras to connect.', penDown: false, fps: 0, lift: null, handSeen: false, onPaper: false }));
+    }
     setSettingsState((prev) => {
       const next = { ...prev, ...patch };
+      if (next.sideDevice === next.topDevice) next.sideDevice = '';
       if (patch.downT !== undefined) next.upT = Math.max(next.upT, next.downT * 1.2);
       if (patch.upT !== undefined) next.upT = Math.max(next.upT, next.downT * 1.05);
       persist(KEY.settings, next);
       return next;
     });
-  }, []);
+  }, [releaseSession]);
 
   const setQuad = useCallback((next: Quad) => {
     setQuadState(next);
@@ -180,8 +208,11 @@ export function useAirNotebook() {
 
   useEffect(() => { filterRef.current.tune(settings.smoothing); }, [settings.smoothing]);
   useEffect(() => {
-    trackers.current.top?.setConfidence(settings.confidence);
-    trackers.current.side?.setConfidence(settings.confidence);
+    for (const tracker of [trackers.current.top, trackers.current.side]) {
+      tracker?.setConfidence(settings.confidence).catch(() => {
+        setRuntime((r) => ({ ...r, message: 'Could not update tracking confidence. Stop and restart cameras to retry.' }));
+      });
+    }
   }, [settings.confidence]);
 
   /* ------------------------------------------------------------- notebook */
@@ -206,19 +237,19 @@ export function useAirNotebook() {
 
   const refreshDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return [];
-    const cams = await listVideoDevices();
+    const cams = await listVideoDevices().catch(() => []);
     setDevices(cams);
     // Before camera permission is granted the browser reports placeholder
     // entries with blank ids — don't let those clobber a restored choice.
     if (cams.length && cams.every((c) => !c.deviceId)) return cams;
-    setSettingsState((prev) => {
-      const next = { ...prev };
-      if (!cams.some((c) => c.deviceId === prev.topDevice)) next.topDevice = cams[0]?.deviceId ?? '';
-      if (prev.sideDevice && !cams.some((c) => c.deviceId === prev.sideDevice)) next.sideDevice = '';
-      if (!next.sideDevice && cams[1] && cams[1].deviceId !== next.topDevice) next.sideDevice = cams[1].deviceId;
-      if (next.topDevice !== prev.topDevice || next.sideDevice !== prev.sideDevice) persist(KEY.settings, next);
-      return next;
-    });
+    const prev = settingsRef.current;
+    const next = { ...prev };
+    if (!cams.some((c) => c.deviceId === prev.topDevice)) next.topDevice = cams[0]?.deviceId ?? '';
+    if (prev.sideDevice && !cams.some((c) => c.deviceId === prev.sideDevice)) next.sideDevice = '';
+    if (next.sideDevice === next.topDevice) next.sideDevice = '';
+    if (next.topDevice !== prev.topDevice || next.sideDevice !== prev.sideDevice) persist(KEY.settings, next);
+    settingsRef.current = next;
+    setSettingsState(next);
     return cams;
   }, []);
 
@@ -234,12 +265,14 @@ export function useAirNotebook() {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !isTyping(e)) { spaceRef.current = true; e.preventDefault(); }
-      if (e.key.toLowerCase() === 'z' && (e.metaKey || e.ctrlKey)) { notebookRef.current?.undo(); e.preventDefault(); }
+      if (!isTyping(e) && e.key.toLowerCase() === 'z' && (e.metaKey || e.ctrlKey)) { notebookRef.current?.undo(); penRef.current = false; e.preventDefault(); }
     };
     const up = (e: KeyboardEvent) => { if (e.code === 'Space') spaceRef.current = false; };
+    const blur = () => { spaceRef.current = false; };
     addEventListener('keydown', down);
     addEventListener('keyup', up);
-    return () => { removeEventListener('keydown', down); removeEventListener('keyup', up); };
+    addEventListener('blur', blur);
+    return () => { removeEventListener('keydown', down); removeEventListener('keyup', up); removeEventListener('blur', blur); };
   }, []);
 
   /* ------------------------------------------------------------ main loop */
@@ -254,18 +287,26 @@ export function useAirNotebook() {
     lastFrame.current = now;
     if (dt > 0) fpsRef.current = fpsRef.current ? fpsRef.current * 0.9 + (1000 / dt) * 0.1 : 1000 / dt;
 
-    const top = trackers.current.top?.detect(topVideo.current, now) ?? null;
-    const side =
+    let top: Landmarks | null;
+    let side: Landmarks | null;
+    try {
+      top = trackers.current.top?.detect(topVideo.current, now) ?? null;
+      side =
       streams.current.side && sideVideo.current
         ? trackers.current.side?.detect(sideVideo.current, now) ?? null
         : null;
+    } catch (error) {
+      releaseSession();
+      setRuntime((r) => ({ ...r, phase: 'error', penDown: false, fps: 0, lift: null, handSeen: false, onPaper: false, message: `Tracking stopped: ${error instanceof Error ? error.message : 'Please restart cameras.'}` }));
+      return;
+    }
 
     // --- side camera: fingertip height above the desk line
     let lift: number | null = null;
     if (side) {
       lastSideTip.current = side[TIP.index].y;
       lift = s.deskY - side[TIP.index].y; // > 0 = above the desk (y grows downward)
-    }
+    } else lastSideTip.current = null;
 
     // --- pen trigger
     let want = penRef.current;
@@ -311,7 +352,7 @@ export function useAirNotebook() {
         onPaper,
       }));
     }
-  }, []);
+  }, [releaseSession]);
 
   /** Repaints both camera overlays: paper box, desk line, hand, fingertip. */
   const paintOverlays = useCallback((top: Landmarks | null, side: Landmarks | null) => {
@@ -346,64 +387,91 @@ export function useAirNotebook() {
   /* --------------------------------------------------------------- actions */
 
   const start = useCallback(async () => {
+    if (startingRef.current) return;
+    releaseSession();
+    const session = sessionRef.current;
+    startingRef.current = true;
+    const ensureCurrent = () => {
+      if (session !== sessionRef.current) throw new Error('Camera startup cancelled.');
+    };
+    const connect = async (id: string | null) => {
+      const stream = await openCamera(id);
+      if (session !== sessionRef.current) { stopStream(stream); ensureCurrent(); }
+      for (const track of stream.getTracks()) {
+        track.addEventListener?.('ended', () => {
+          if (session !== sessionRef.current) return;
+          releaseSession();
+          setRuntime((r) => ({ ...r, phase: 'error', penDown: false, fps: 0, lift: null, handSeen: false, onPaper: false, message: 'Camera disconnected. Reconnect it and start cameras again.' }));
+        }, { once: true });
+      }
+      return stream;
+    };
     try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access requires HTTPS or localhost and a supported browser.');
       setRuntime((r) => ({ ...r, phase: 'starting', message: 'Requesting cameras…' }));
       // Prime permissions so labels and stable deviceIds become visible.
-      stopStream(await openCamera(null));
+      stopStream(await connect(null));
       const cams = await refreshDevices();
+      ensureCurrent();
       const s = settingsRef.current;
       const topId = s.topDevice || cams[0]?.deviceId || null;
-      const sideId = s.sideDevice || null;
+      const sideId = s.sideDevice && s.sideDevice !== topId ? s.sideDevice : null;
 
       stopStream(streams.current.top);
       stopStream(streams.current.side);
 
-      streams.current.top = await openCamera(topId);
+      streams.current.top = await connect(topId);
       if (topVideo.current) await attach(topVideo.current, streams.current.top);
+      ensureCurrent();
 
       if (sideId && sideVideo.current) {
-        streams.current.side = await openCamera(sideId);
+        streams.current.side = await connect(sideId);
         await attach(sideVideo.current, streams.current.side);
+        ensureCurrent();
       } else {
         streams.current.side = null;
         if (s.trigger === 'height') setSettings({ trigger: 'pinch' });
       }
 
       setRuntime((r) => ({ ...r, phase: 'loading', message: 'Loading hand model…' }));
-      trackers.current.top ??= await createTracker(s.confidence);
-      if (streams.current.side) trackers.current.side ??= await createTracker(s.confidence);
+      for (const camera of (streams.current.side ? ['top', 'side'] : ['top']) as ('top' | 'side')[]) {
+        if (!trackers.current[camera]) {
+          const tracker = await createTracker(s.confidence);
+          if (session !== sessionRef.current) { tracker.close(); ensureCurrent(); }
+          trackers.current[camera] = tracker;
+        }
+      }
+      ensureCurrent();
 
       setRuntime((r) => ({
         ...r,
         phase: 'live',
         message: streams.current.side
           ? 'Fit the box to your paper, set the desk line, then write.'
-          : 'No side camera — using pinch as the pen trigger.',
+          : 'Camera ready. Fit the paper box and use your selected pen trigger.',
       }));
       if (loopRef.current === null) loopRef.current = requestAnimationFrame(loop);
     } catch (err) {
+      if (session !== sessionRef.current) return;
+      releaseSession();
       const e = err as Error;
-      setRuntime((r) => ({ ...r, phase: 'error', message: `${e.name}: ${e.message}` }));
+      setRuntime((r) => ({ ...r, phase: 'error', penDown: false, fps: 0, lift: null, handSeen: false, onPaper: false, message: `${e.name}: ${e.message}` }));
+    } finally {
+      if (session === sessionRef.current) startingRef.current = false;
     }
-  }, [loop, refreshDevices, setSettings]);
+  }, [loop, refreshDevices, setSettings, releaseSession]);
 
   const stop = useCallback(() => {
-    if (loopRef.current !== null) cancelAnimationFrame(loopRef.current);
-    loopRef.current = null;
-    stopStream(streams.current.top);
-    stopStream(streams.current.side);
-    streams.current = { top: null, side: null };
-    penRef.current = false;
-    setRuntime((r) => ({ ...r, phase: 'idle', message: 'Cameras stopped.', penDown: false, fps: 0 }));
-  }, []);
+    releaseSession();
+    setRuntime((r) => ({ ...r, phase: 'idle', message: 'Cameras stopped.', penDown: false, fps: 0, lift: null, handSeen: false, onPaper: false }));
+  }, [releaseSession]);
 
   useEffect(() => () => {
-    if (loopRef.current !== null) cancelAnimationFrame(loopRef.current);
-    stopStream(streams.current.top);
-    stopStream(streams.current.side);
+    releaseSession();
     trackers.current.top?.close();
     trackers.current.side?.close();
-  }, []);
+    trackers.current = { top: null, side: null };
+  }, [releaseSession]);
 
   const calibrateDesk = useCallback(() => {
     if (lastSideTip.current === null) {
@@ -416,11 +484,11 @@ export function useAirNotebook() {
 
   const notebookActions = useMemo(
     () => ({
-      undo: () => notebookRef.current?.undo(),
-      clearPage: () => notebookRef.current?.clearPage(),
-      addPage: () => notebookRef.current?.addPage(),
-      goTo: (i: number) => notebookRef.current?.goTo(i),
-      reset: () => notebookRef.current?.reset(),
+      undo: () => { notebookRef.current?.undo(); penRef.current = false; },
+      clearPage: () => { notebookRef.current?.clearPage(); penRef.current = false; },
+      addPage: () => { notebookRef.current?.end(); notebookRef.current?.addPage(); penRef.current = false; },
+      goTo: (i: number) => { notebookRef.current?.end(); notebookRef.current?.goTo(i); penRef.current = false; },
+      reset: () => { notebookRef.current?.reset(); penRef.current = false; },
     }),
     [],
   );

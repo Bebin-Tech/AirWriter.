@@ -38,34 +38,43 @@ async function loadVision() {
 
 export type Tracker = {
   detect(video: HTMLVideoElement, tsMs: number): Landmarks | null;
-  setConfidence(c: number): void;
+  setConfidence(c: number): Promise<void>;
   close(): void;
 };
 
 export async function createTracker(minConfidence = 0.4): Promise<Tracker> {
-  visionPromise ??= loadVision();
+  visionPromise ??= loadVision().catch((error) => { visionPromise = null; throw error; });
   const { mod, fileset, modelPath } = await visionPromise;
 
-  const landmarker: HandLandmarker = await mod.HandLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: modelPath, delegate: 'GPU' },
-    runningMode: 'VIDEO',
+  const options = {
+    runningMode: 'VIDEO' as const,
     numHands: 1,
     minHandDetectionConfidence: minConfidence,
     minHandPresenceConfidence: minConfidence,
     minTrackingConfidence: minConfidence,
-  });
+  };
+  let landmarker: HandLandmarker;
+  try {
+    landmarker = await mod.HandLandmarker.createFromOptions(fileset, {
+      ...options, baseOptions: { modelAssetPath: modelPath, delegate: 'GPU' },
+    });
+  } catch {
+    landmarker = await mod.HandLandmarker.createFromOptions(fileset, {
+      ...options, baseOptions: { modelAssetPath: modelPath, delegate: 'CPU' },
+    });
+  }
 
   let lastTs = -1;
   return {
     detect(video, tsMs) {
-      if (!video.videoWidth) return null;
+      if (!video.videoWidth || video.readyState < 2) return null;
       // VIDEO mode rejects non-increasing timestamps; two trackers share a clock.
       const ts = tsMs <= lastTs ? lastTs + 1 : tsMs;
       lastTs = ts;
       return landmarker.detectForVideo(video, ts).landmarks?.[0] ?? null;
     },
     setConfidence(c) {
-      landmarker.setOptions({
+      return landmarker.setOptions({
         minHandDetectionConfidence: c,
         minHandPresenceConfidence: c,
         minTrackingConfidence: c,

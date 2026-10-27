@@ -132,7 +132,7 @@ export function PaperCamera({
       }
     >
       <video ref={videoRef} playsInline muted
-        className={clsx('absolute inset-0 h-full w-full object-cover', mirror && 'scale-x-[-1]')} />
+        className={clsx('absolute inset-0 h-full w-full object-fill', mirror && 'scale-x-[-1]')} />
       {!active && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
           <div className="grid h-14 w-14 place-items-center rounded-2xl border border-accent/20 bg-accent/5 text-accent">
@@ -194,7 +194,7 @@ export function SideCamera({
       }
     >
       <video ref={videoRef} playsInline muted
-        className={clsx('absolute inset-0 h-full w-full object-cover', mirror && 'scale-x-[-1]')} />
+        className={clsx('absolute inset-0 h-full w-full object-fill', mirror && 'scale-x-[-1]')} />
       <canvas
         ref={canvasRef}
         onPointerDown={(e) => {

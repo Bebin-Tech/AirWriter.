@@ -19,26 +19,28 @@ Rules:
 - Where a word is genuinely illegible, write [?] in its place rather than guessing.
 - If the page has no writing at all, output nothing.`;
 
-type Body = { pages?: string[] };
-
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: 'ANTHROPIC_API_KEY is not set. Add it to .env.local and restart the dev server.' },
-      { status: 501 },
-    );
-  }
-
-  let body: Body;
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Malformed request body.' }, { status: 400 });
   }
 
-  const pages = body.pages ?? [];
+  if (!body || typeof body !== 'object' || !('pages' in body) || !Array.isArray(body.pages) ||
+      !body.pages.every((page: unknown) => typeof page === 'string' && /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(page))) {
+    return NextResponse.json({ error: 'Pages must be an array of base64 PNG/JPEG/WebP images.' }, { status: 400 });
+  }
+  const pages: string[] = body.pages;
   if (!pages.length) return NextResponse.json({ error: 'No pages supplied.' }, { status: 400 });
   if (pages.length > 40) return NextResponse.json({ error: 'Too many pages (max 40).' }, { status: 400 });
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: 'Typed transcription is not configured. Set ANTHROPIC_API_KEY in the server environment. Handwriting PDF export works without it.' },
+      { status: 501 },
+    );
+  }
 
   const client = new Anthropic();
 
